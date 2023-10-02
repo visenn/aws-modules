@@ -1,119 +1,65 @@
-resource "aws_s3_bucket" "s3_bucket" {
+resource "aws_s3_bucket" "main" {
   bucket = var.bucket_name
-  acl    = "private" # Block public access
-
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        kms_master_key_id = var.kms_key_id
-        sse_algorithm     = "aws:kms"
-      }
-    }
-  }
 
   versioning {
     enabled = var.versioning_enabled
   }
 
-  logging {
-    target_bucket = var.s3_access_logs_bucket_arn.bucket_arn
-    target_prefix = var.s3_access_logs_bucket_arn.folder_path != "" ? var.s3_access_logs_bucket_arn.folder_path : "access-logs/"
-  }
-
-  dynamic "grant" {
-    for_each = var.cross_account_roles
+  dynamic "logging" {
+    for_each = var.s3access_logs_bucket_arn != null ? [1] : []
     content {
-      type        = "Principal"
-      actions     = var.cross_account_roles[grant.key].permissions
-      resources   = [aws_s3_bucket.s3_bucket.arn + var.cross_account_roles[grant.key].folder_path + "/*"]
-      permissions = var.cross_account_roles[grant.key].access_types
-
-      conditions {
-        test     = "StringEquals"
-        values   = [var.cross_account_roles[grant.key].role_arn]
-        variable = "aws:userid"
-      }
+      target_bucket = var.s3access_logs_bucket_arn
+      target_prefix = "logs/"
     }
   }
 
-  # Enable uniform bucket-level access control
-  bucket_level_access {
-    enforce = true
-  }
-
-  # Enable CloudTrail Data Events
-  dynamic "cloudtrail" {
-    for_each = var.cloudtrail_data_events_enabled ? [true] : []
-    content {
-      event_name = "s3.amazonaws.com"
-      include_management_events = true
-      send_to_cloudtrail = true
-    }
-  }
-}
-
-
-resource "aws_s3_bucket_lifecycle_configuration" "bucket-lifecycle-config" {
-  count = var.lifecycle_transition_days_standard_ia >= 0 || var.lifecycle_transition_days_glacier >= 0 ? 1 : 0
-  bucket = aws_s3_bucket.s3_bucket.id
-
-  rule {
-    id = "lifecycle-rule"
-
-    #expiration {
-    #  days = 90
-    #}
-
-    status = "Enabled"
+  lifecycle_rule {
+    id      = "standard_ia_rule"
+    status  = "Enabled"
+    enabled = var.lifecycle_rule != {} && var.lifecycle_rule.days_to_standard_ia > 0
 
     transition {
-      days          = var.lifecycle_transition_days_standard_ia
+      days          = var.lifecycle_rule.days_to_standard_ia
       storage_class = "STANDARD_IA"
     }
+  }
+
+  lifecycle_rule {
+    id      = "glacier_rule"
+    status  = "Enabled"
+    enabled = var.lifecycle_rule != {} && var.lifecycle_rule.days_to_glacier > 0
 
     transition {
-      days          = var.lifecycle_transition_days_glacier
+      days          = var.lifecycle_rule.days_to_glacier
       storage_class = "GLACIER"
     }
   }
-}
 
-resource "aws_s3_bucket_ownership_controls" "bucket-ownership" {
-  bucket = aws_s3_bucket.s3_bucket.id
-  rule {
-    object_ownership = "BucketOwnerPreferred"
+  dynamic "acl" {
+    for_each = var.cross_account_iam_roles
+    content {
+      permission = "read"
+      grants = [{
+        type        = "CanonicalUser"
+        permissions = ["FULL_CONTROL"]
+        id          = aws_iam_role.acl[each.key].id
+      }]
+    }
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "bucket-public-block" {
-  bucket = aws_s3_bucket.s3_bucket.id
+resource "aws_iam_role" "acl" {
+  for_each = toset(var.cross_account_iam_roles)
+  name     = "cross-account-access-role-${each.key}"
 
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-
-resource "aws_s3_bucket_acl" "bucket-acl" {
-  depends_on = [aws_s3_bucket_ownership_controls.bucket-ownership]
-
-  bucket = aws_s3_bucket.s3_bucket.id
-  access_control_policy {
-    grant {
-      grantee {
-        id   = data.aws_canonical_user_id.current.id
-        type = "CanonicalUser"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        AWS = each.value
       }
-      permission = "READ"
-    }
-
-    grant {
-      grantee {
-        type = "Group"
-        uri  = "http://acs.amazonaws.com/groups/s3/LogDelivery"
-      }
-      permission = "READ_ACP"
-    }
-
-  }
+    }]
+  })
 }
