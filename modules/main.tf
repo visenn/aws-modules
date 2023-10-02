@@ -53,7 +53,7 @@ resource "aws_s3_bucket" "s3_bucket" {
 }
 
 
-resource "aws_s3_bucket_lifecycle_configuration" "bucket-config" {
+resource "aws_s3_bucket_lifecycle_configuration" "bucket-lifecycle-config" {
   count = var.lifecycle_transition_days_standard_ia >= 0 || var.lifecycle_transition_days_glacier >= 0 ? 1 : 0
   bucket = aws_s3_bucket.s3_bucket.id
 
@@ -75,5 +75,45 @@ resource "aws_s3_bucket_lifecycle_configuration" "bucket-config" {
       days          = var.lifecycle_transition_days_glacier
       storage_class = "GLACIER"
     }
+  }
+}
+
+resource "aws_s3_bucket_ownership_controls" "bucket-ownership" {
+  bucket = aws_s3_bucket.s3_bucket.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "bucket-public-block" {
+  bucket = aws_s3_bucket.s3_bucket.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_acl" "bucket-acl" {
+  depends_on = [aws_s3_bucket_ownership_controls.bucket-ownership]
+
+  bucket = aws_s3_bucket.s3_bucket.id
+  access_control_policy {
+    grant {
+      grantee {
+        id   = data.aws_canonical_user_id.current.id
+        type = "CanonicalUser"
+      }
+      permission = "READ"
+    }
+
+    grant {
+      grantee {
+        type = "Group"
+        uri  = "http://acs.amazonaws.com/groups/s3/LogDelivery"
+      }
+      permission = "READ_ACP"
+    }
+
   }
 }
