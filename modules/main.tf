@@ -6,10 +6,10 @@ resource "aws_s3_bucket" "main" {
   }
 
   dynamic "logging" {
-    for_each = var.s3access_logs_bucket_arn != null ? [1] : []
+    for_each = var.s3_access_logs_bucket_arn != "" ? [1] : []
     content {
-      target_bucket = var.s3access_logs_bucket_arn
-      target_prefix = "logs/"
+      target_bucket = replace(var.s3_access_logs_bucket_arn, "/.*$", "")
+      target_prefix = replace(var.s3_access_logs_bucket_arn, "^.*/", "")
     }
   }
 
