@@ -2,6 +2,7 @@ module "s3_bucket" {
   source = "./modules/"
 
   bucket_name = "vis-s3-example-2200"
+  kms_key_id = "arn:aws:kms:eu-west-1:612820001683:key/44a3332f-8b09-451d-a690-0ac477359a69"
   
   cross_account_roles = {
     role1 = {
