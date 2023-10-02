@@ -48,19 +48,25 @@ resource "aws_s3_bucket_logging" "bucket_logging" {
 resource "aws_s3_bucket_lifecycle_configuration" "bucket_lifecycle" {
   count  = var.object_lifecycle != null ? 1 : 0
   bucket = aws_s3_bucket.bucket.id
-  
+
   rule {
     id      = "transition-rule"
-    status = "Enabled"
-    
-    transition {
-      days          = var.object_lifecycle.ia_transition_days
-      storage_class = "STANDARD_IA"
+    enabled = true
+
+    dynamic "transition" {
+      for_each = var.object_lifecycle.ia_transition_days != null ? [var.object_lifecycle.ia_transition_days] : []
+      content {
+        days          = transition.value
+        storage_class = "STANDARD_IA"
+      }
     }
-    
-    transition {
-      days          = var.object_lifecycle.glacier_transition_days
-      storage_class = "GLACIER"
+
+    dynamic "transition" {
+      for_each = var.object_lifecycle.glacier_transition_days != null ? [var.object_lifecycle.glacier_transition_days] : []
+      content {
+        days          = transition.value
+        storage_class = "GLACIER"
+      }
     }
   }
 }
