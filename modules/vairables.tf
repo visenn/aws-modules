@@ -1,29 +1,44 @@
-variable "bucket_name" {
-  description = "The name of the S3 bucket to create."
-}
-
-variable "versioning_enabled" {
-  description = "Set to true to enable versioning."
+variable "versioning" {
+  description = "Enable versioning for the S3 bucket"
+  type        = bool
   default     = false
 }
 
-variable "s3access_logs_bucket_arn" {
-  description = "Optional S3 access logs bucket ARN."
-  default     = null
+variable "s3access" {
+  description = "S3 access logs configuration"
+  type = object({
+    bucket = string
+    prefix = string
+  })
+  default = null
 }
 
-variable "lifecycle_rule" {
-  description = "Optional lifecycle policy configuration."
-  default     = {}
+variable "lifecycle" {
+  description = "Lifecycle configuration for transition to IA and Glacier"
+  type = object({
+    ia_transition_days     = number
+    glacier_transition_days= number
+  })
+  default = null
 }
 
-
-variable "cross_account_roles" {
-  description = "Map of IAM roles, folder paths, and permissions."
-  type        = map(object({
-    role_arn    = string
-    folder_path = string
-    permissions = string
+variable "external_iam_roles" {
+  description = "IAM roles from other AWS accounts and their permissions"
+  type = list(object({
+    arn      = string
+    subfolder= string
+    permissions = string # "readonly" or "readwrite"
   }))
-  default     = {}
+  default = []
+}
+
+variable "enable_data_events" {
+  description = "Enable CloudTrail Data Events"
+  type        = bool
+  default     = false
+}
+
+variable "kms_key_id" {
+  description = "KMS Key ID for S3 bucket encryption"
+  type        = string
 }
