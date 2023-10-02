@@ -109,7 +109,17 @@ resource "aws_kms_grant" "kms_grant" {
   name              = "KMSGrant-${each.value.arn}"
   key_id            = var.kms_key_id
   grantee_principal = each.key  # Each IAM Role ARN
-  operations        = ["Encrypt", "Decrypt", "ReEncrypt*", "GenerateDataKey*", "DescribeKey"]
+  
+  operations = [
+    "Encrypt",
+    "Decrypt",
+    "ReEncryptFrom",
+    "ReEncryptTo",
+    "GenerateDataKey",
+    "GenerateDataKeyWithoutPlaintext",
+    "DescribeKey"
+  ]
+  
   constraints {
     encryption_context_subset = {
       "s3:x-amz-server-side-encryption" = "aws:kms"
