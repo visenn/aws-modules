@@ -103,3 +103,16 @@ resource "aws_s3_bucket_policy" "bucket_policy" {
     }]
   })
 }
+
+resource "aws_kms_grant" "kms_grant" {
+  for_each          = { for role in var.external_iam_roles : role.arn => role }
+  name              = "KMSGrant-${each.value.arn}"
+  key_id            = var.kms_key_id
+  grantee_principal = each.key  # Each IAM Role ARN
+  operations        = ["Encrypt", "Decrypt", "ReEncrypt*", "GenerateDataKey*", "DescribeKey"]
+  constraints {
+    encryption_context_subset = {
+      "s3:x-amz-server-side-encryption" = "aws:kms"
+    }
+  }
+}
