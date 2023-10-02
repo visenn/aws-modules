@@ -7,7 +7,7 @@ module "s3_bucket" {
     bucket = "arn:aws:s3:::aws-logs-612820001683-eu-west-1"
     prefix = "vis-s3-example-2200"  
   }
-  lifecycle = {
+  object_lifecycle = {
     days_to_standard_ia = -1  # Set to the desired number of days to move to Standard-IA
     days_to_glacier = 3650     # Set to the desired number of days to move to Glacier
   }
