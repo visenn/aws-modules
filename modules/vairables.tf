@@ -16,8 +16,8 @@ variable "s3access" {
 variable "object_lifecycle" {
   description = "Lifecycle configuration for transition to IA and Glacier"
   type = object({
-    ia_transition_days     = number
-    glacier_transition_days= number
+    ia_transition_days     = optional(number)
+    glacier_transition_days= optional(number)
   })
   default = null
 }
