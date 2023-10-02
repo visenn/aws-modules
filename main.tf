@@ -20,4 +20,5 @@ module "s3_bucket" {
       permissions   = "read_write"
     },
   } 
+  kms_key_id = "arn:aws:kms:eu-west-1:612820001683:key/44a3332f-8b09-451d-a690-0ac477359a69"
 }
