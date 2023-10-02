@@ -67,6 +67,14 @@ resource "aws_s3_bucket" "main" {
       }]
     }
   }
+
+
+  dynamic "cloudtrail" {
+    for_each = var.enable_cloudtrail_data_events ? [1] : []
+    content {
+      name = "s3-data-events"
+    }
+  }
 }
 
 resource "aws_iam_role" "acl" {
