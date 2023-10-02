@@ -8,20 +8,20 @@ module "s3_bucket" {
     prefix = "vis-s3-example-2200"  
   }
   object_lifecycle = {
-    days_to_standard_ia = -1  # Set to the desired number of days to move to Standard-IA
-    days_to_glacier = 3650     # Set to the desired number of days to move to Glacier
+    ia_transition_days = -1  # Set to the desired number of days to move to Standard-IA
+    glacier_transition_days = 3650     # Set to the desired number of days to move to Glacier
   }
-  external_iam_roles = {
-    role1 = {
+  external_iam_roles = [
+    {
       arn      = "arn:aws:iam::976042434071:role/AdmRole4Viscon"
       subfolder   = "example-folder1"
       permissions   = "readonly"
     },
-    role2 = {
+    {
       arn      = "arn:aws:iam::121653596033:role/AdmRole4Viscon"
       subfolder   = "example-folder2"
       permissions   = "read_write"
     },
-  } 
+  ] 
   kms_key_id = "arn:aws:kms:eu-west-1:612820001683:key/44a3332f-8b09-451d-a690-0ac477359a69"
 }
