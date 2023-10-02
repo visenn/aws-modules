@@ -1,41 +1,7 @@
 resource "aws_s3_bucket" "bucket" {
-  bucket = var.bucket_name
+  bucket = "my-tf-test-bucket"
   acl    = "private"
-
-  versioning {
-    enabled = var.versioning
-  }
-
-  logging {
-    target_bucket = var.s3access != null ? var.s3access.bucket : null
-    target_prefix = var.s3access != null ? var.s3access.prefix : null
-  }
-
-  lifecycle_rule {
-    id      = "transition-rule"
-    status  = "Enabled"
-
-    transition {
-      days          = var.lifecycle != null ? var.lifecycle.ia_transition_days : 0
-      storage_class = "STANDARD_IA"
-    }
-
-    transition {
-      days          = var.lifecycle != null ? var.lifecycle.glacier_transition_days : 0
-      storage_class = "GLACIER"
-    }
-  }
-
-  # Adding bucket policy to grant IAM roles access
-  dynamic "policy" {
-    for_each = var.external_iam_roles
-    content {
-      arn = policy.value.arn
-      actions = policy.value.permissions == "readonly" ? ["s3:GetObject"] : ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-      resources = ["${aws_s3_bucket.bucket.arn}/${policy.value.subfolder}/*"]
-    }
-  }
-
+  
   # Server-side encryption using the provided KMS key
   server_side_encryption_configuration {
     rule {
@@ -45,7 +11,7 @@ resource "aws_s3_bucket" "bucket" {
       }
     }
   }
-
+  
   # Block public access
   public_access_block {
     block_public_acls       = true
@@ -55,18 +21,70 @@ resource "aws_s3_bucket" "bucket" {
   }
 }
 
+resource "aws_s3_bucket_versioning" "bucket_versioning" {
+  count  = var.versioning ? 1 : 0
+  bucket = aws_s3_bucket.bucket.id
+  
+  status = "Enabled"
+}
+
+resource "aws_s3_bucket_logging" "bucket_logging" {
+  count  = var.s3access != null ? 1 : 0
+  bucket = aws_s3_bucket.bucket.id
+  
+  target_bucket = var.s3access.bucket
+  target_prefix = var.s3access.prefix
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "bucket_lifecycle" {
+  count  = var.object_lifecycle != null ? 1 : 0
+  bucket = aws_s3_bucket.bucket.id
+  
+  rule {
+    id      = "transition-rule"
+    enabled = true
+    
+    transition {
+      days          = var.object_lifecycle.ia_transition_days
+      storage_class = "STANDARD_IA"
+    }
+    
+    transition {
+      days          = var.object_lifecycle.glacier_transition_days
+      storage_class = "GLACIER"
+    }
+  }
+}
+
 resource "aws_cloudtrail" "this" {
   count           = var.enable_data_events ? 1 : 0
   name            = "my-cloudtrail"
   s3_bucket_name  = aws_s3_bucket.bucket.bucket
-
+  
   event_selector {
     read_write_type           = "All"
     include_management_events = true
-
+    
     data_resource {
-      type = "AWS::S3::Object"
+      type   = "AWS::S3::Object"
       values = ["${aws_s3_bucket.bucket.arn}/"]
     }
   }
+}
+
+resource "aws_s3_bucket_policy" "bucket_policy" {
+  bucket = aws_s3_bucket.bucket.id
+
+  # Construct the bucket policy dynamically based on the provided IAM roles and permissions
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [for role in var.external_iam_roles : {
+      Action   = role.permissions == "readonly" ? ["s3:GetObject"] : ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      Effect   = "Allow",
+      Resource = "${aws_s3_bucket.bucket.arn}/${role.subfolder}/*",
+      Principal = {
+        AWS = role.arn
+      }
+    }]
+  })
 }
