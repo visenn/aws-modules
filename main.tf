@@ -9,7 +9,7 @@ module "s3_bucket" {
     prefix = "vis-s3-example-2200"  
   }
   object_lifecycle = {
-    ia_transition_days = 0  # Set to the desired number of days to move to Standard-IA
+    #ia_transition_days = 30  # Set to the desired number of days to move to Standard-IA
     glacier_transition_days = 3650     # Set to the desired number of days to move to Glacier
   }
   external_iam_roles = [
