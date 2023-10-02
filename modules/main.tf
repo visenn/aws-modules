@@ -20,24 +20,6 @@ resource "aws_s3_bucket" "s3_bucket" {
     target_prefix = var.s3_access_logs_bucket_arn.folder_path != "" ? var.s3_access_logs_bucket_arn.folder_path : "access-logs/"
   }
 
-  dynamic "lifecycle_rule" {
-    for_each = var.lifecycle_transition_days_standard_ia >= 0 || var.lifecycle_transition_days_glacier >= 0 ? [true] : []
-    content {
-      id      = "lifecycle-rule"
-      status  = "Enabled"
-
-      transition {
-        days          = var.lifecycle_transition_days_standard_ia
-        storage_class = "STANDARD_IA"
-      }
-
-      transition {
-        days          = var.lifecycle_transition_days_glacier
-        storage_class = "GLACIER"
-      }
-    }
-  }
-
   dynamic "grant" {
     for_each = var.cross_account_roles
     content {
@@ -66,6 +48,32 @@ resource "aws_s3_bucket" "s3_bucket" {
       event_name = "s3.amazonaws.com"
       include_management_events = true
       send_to_cloudtrail = true
+    }
+  }
+}
+
+
+resource "aws_s3_bucket_lifecycle_configuration" "bucket-config" {
+  count = var.lifecycle_transition_days_standard_ia >= 0 || var.lifecycle_transition_days_glacier >= 0 ? 1 : 0
+  bucket = aws_s3_bucket.s3_bucket.id
+
+  rule {
+    id = "lifecycle-rule"
+
+    #expiration {
+    #  days = 90
+    #}
+
+    status = "Enabled"
+
+    transition {
+      days          = var.lifecycle_transition_days_standard_ia
+      storage_class = "STANDARD_IA"
+    }
+
+    transition {
+      days          = var.lifecycle_transition_days_glacier
+      storage_class = "GLACIER"
     }
   }
 }
