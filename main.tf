@@ -4,7 +4,8 @@ module "s3_bucket" {
   bucket_name = "vis-s3-example-2200"  # Change to your desired bucket name
   versioning = true  # Set to true to enable versioning
   s3access = {
-    bucket = "arn:aws:s3:::aws-logs-612820001683-eu-west-1"
+    #bucket = "arn:aws:s3:::aws-logs-612820001683-eu-west-1"
+    bucket = "aws-logs-612820001683-eu-west-1"
     prefix = "vis-s3-example-2200"  
   }
   object_lifecycle = {
