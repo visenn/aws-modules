@@ -49,7 +49,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "bucket_lifecycle" {
   
   rule {
     id      = "transition-rule"
-    enabled = true
+    status = "Enabled"
     
     transition {
       days          = var.object_lifecycle.ia_transition_days
