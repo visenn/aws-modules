@@ -8,8 +8,16 @@ module "s3_bucket" {
     days_to_standard_ia = 30  # Set to the desired number of days to move to Standard-IA
     days_to_glacier = 60     # Set to the desired number of days to move to Glacier
   }
-  cross_account_iam_roles = [
-    "arn:aws:iam::976042434071:role/AdmRole4Viscon",
-    "arn:aws:iam::121653596033:role/AdmRole4Viscon",
-  ]  # List of IAM roles to grant access from other AWS accounts
+  cross_account_roles = {
+    role1 = {
+      role_arn      = "arn:aws:iam::976042434071:role/AdmRole4Viscon"
+      folder_path   = "example-folder1"
+      permissions   = "read"
+    },
+    role2 = {
+      role_arn      = "arn:aws:iam::121653596033:role/AdmRole4Viscon"
+      folder_path   = "example-folder2"
+      permissions   = "read_write"
+    },
+  } 
 }
