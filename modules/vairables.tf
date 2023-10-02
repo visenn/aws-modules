@@ -13,7 +13,7 @@ variable "s3access" {
   default = null
 }
 
-variable "lifecycle" {
+variable "object_lifecycle" {
   description = "Lifecycle configuration for transition to IA and Glacier"
   type = object({
     ia_transition_days     = number
@@ -25,8 +25,8 @@ variable "lifecycle" {
 variable "external_iam_roles" {
   description = "IAM roles from other AWS accounts and their permissions"
   type = list(object({
-    arn      = string
-    subfolder= string
+    arn         = string
+    subfolder   = string
     permissions = string # "readonly" or "readwrite"
   }))
   default = []
@@ -40,10 +40,5 @@ variable "enable_data_events" {
 
 variable "kms_key_id" {
   description = "KMS Key ID for S3 bucket encryption"
-  type        = string
-}
-
-variable "bucket_name" {
-  description = "The name of bucket"
   type        = string
 }
