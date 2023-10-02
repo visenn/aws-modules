@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "bucket" {
-  bucket = "my-tf-test-bucket"
+  bucket = var.bucket_name
   acl    = "private"
   
   # Server-side encryption using the provided KMS key
