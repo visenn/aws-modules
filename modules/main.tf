@@ -1,6 +1,5 @@
 resource "aws_s3_bucket" "bucket" {
   bucket = var.bucket_name
-  acl    = "private"
   
   # Server-side encryption using the provided KMS key
   server_side_encryption_configuration {
@@ -11,6 +10,11 @@ resource "aws_s3_bucket" "bucket" {
       }
     }
   }
+}
+
+resource "aws_s3_bucket_acl" "bucket_acl" {
+  bucket = aws_s3_bucket.bucket.id
+  acl    = "private"
 }
 
 resource "aws_s3_bucket_public_access_block" "bucket_public_access_block" {
@@ -24,9 +28,11 @@ resource "aws_s3_bucket_public_access_block" "bucket_public_access_block" {
 
 resource "aws_s3_bucket_versioning" "bucket_versioning" {
   count  = var.versioning ? 1 : 0
-  bucket = aws_s3_bucket.bucket.id
-  
-  status = "Enabled"
+  bucket = aws_s3_bucket.bucket.bucket
+
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_logging" "bucket_logging" {
