@@ -36,20 +36,20 @@ resource "aws_s3_bucket" "main" {
   }
 
   dynamic "acl" {
-    for_each = var.cross_account_iam_roles
+    for_each = var.cross_account_roles
     content {
-      permission = "read"
+      permission = var.cross_account_roles[acl.key].permissions
       grants = [{
         type        = "CanonicalUser"
         permissions = ["FULL_CONTROL"]
-        id          = aws_iam_role.acl[each.key].id
+        id          = aws_iam_role.acl[acl.key].id
       }]
     }
   }
 }
 
 resource "aws_iam_role" "acl" {
-  for_each = toset(var.cross_account_iam_roles)
+  for_each = var.cross_account_roles
   name     = "cross-account-access-role-${each.key}"
 
   assume_role_policy = jsonencode({
@@ -58,7 +58,7 @@ resource "aws_iam_role" "acl" {
       Action = "sts:AssumeRole",
       Effect = "Allow",
       Principal = {
-        AWS = each.value
+        AWS = var.cross_account_roles[each.key].role_arn
       }
     }]
   })
