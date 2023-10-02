@@ -1,13 +1,15 @@
 resource "aws_s3_bucket" "bucket" {
   bucket = var.bucket_name
   
-  # Server-side encryption using the provided KMS key
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        kms_master_key_id = var.kms_key_id
-        sse_algorithm     = "aws:kms"
-      }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "sse_configuration" {
+  bucket = aws_s3_bucket.bucket.id
+  
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = var.kms_key_id
+      sse_algorithm     = "aws:kms"
     }
   }
 }
