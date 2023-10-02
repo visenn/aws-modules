@@ -35,6 +35,27 @@ resource "aws_s3_bucket" "main" {
     }
   }
 
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        kms_master_key_id = var.kms_key_id
+        sse_algorithm    = "aws:kms"
+      }
+    }
+  }
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  bucket_acl {
+    acl = "private"
+  }
+
+  uniform_bucket_level_access = true
+
   dynamic "acl" {
     for_each = var.cross_account_roles
     content {
