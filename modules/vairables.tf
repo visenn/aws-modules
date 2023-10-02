@@ -17,8 +17,13 @@ variable "lifecycle_rule" {
   default     = {}
 }
 
-variable "cross_account_iam_roles" {
-  description = "Optional list of IAM roles from other AWS accounts to grant access."
-  type        = list(string)
-  default     = []
+
+variable "cross_account_roles" {
+  description = "Map of IAM roles, folder paths, and permissions."
+  type        = map(object({
+    role_arn    = string
+    folder_path = string
+    permissions = string
+  }))
+  default     = {}
 }
