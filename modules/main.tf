@@ -1,94 +1,72 @@
-resource "aws_s3_bucket" "main" {
-  bucket = var.bucket_name
+resource "aws_s3_bucket" "bucket" {
+  bucket = "my-tf-test-bucket"
+  acl    = "private"
 
   versioning {
-    enabled = var.versioning_enabled
+    enabled = var.versioning
   }
 
-  dynamic "logging" {
-    for_each = var.s3_access_logs_bucket_arn != "" ? [1] : []
-    content {
-      target_bucket = replace(var.s3_access_logs_bucket_arn, "/.*$", "")
-      target_prefix = replace(var.s3_access_logs_bucket_arn, "^.*/", "")
-    }
+  logging {
+    target_bucket = var.s3access != null ? var.s3access.bucket : null
+    target_prefix = var.s3access != null ? var.s3access.prefix : null
   }
 
   lifecycle_rule {
-    id      = "standard_ia_rule"
+    id      = "transition-rule"
     status  = "Enabled"
-    enabled = var.lifecycle_rule != {} && var.lifecycle_rule.days_to_standard_ia > 0
 
     transition {
-      days          = var.lifecycle_rule.days_to_standard_ia
+      days          = var.lifecycle != null ? var.lifecycle.ia_transition_days : 0
       storage_class = "STANDARD_IA"
     }
-  }
-
-  lifecycle_rule {
-    id      = "glacier_rule"
-    status  = "Enabled"
-    enabled = var.lifecycle_rule != {} && var.lifecycle_rule.days_to_glacier > 0
 
     transition {
-      days          = var.lifecycle_rule.days_to_glacier
+      days          = var.lifecycle != null ? var.lifecycle.glacier_transition_days : 0
       storage_class = "GLACIER"
     }
   }
 
+  # Adding bucket policy to grant IAM roles access
+  dynamic "policy" {
+    for_each = var.external_iam_roles
+    content {
+      arn = policy.value.arn
+      actions = policy.value.permissions == "readonly" ? ["s3:GetObject"] : ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+      resources = ["${aws_s3_bucket.bucket.arn}/${policy.value.subfolder}/*"]
+    }
+  }
 
+  # Server-side encryption using the provided KMS key
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
         kms_master_key_id = var.kms_key_id
-        sse_algorithm    = "aws:kms"
+        sse_algorithm     = "aws:kms"
       }
     }
   }
 
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-
-  bucket_acl {
-    acl = "private"
-  }
-
-  uniform_bucket_level_access = true
-
-  dynamic "acl" {
-    for_each = var.cross_account_roles
-    content {
-      permission = var.cross_account_roles[acl.key].permissions
-      grants = [{
-        type        = "CanonicalUser"
-        permissions = ["FULL_CONTROL"]
-        id          = aws_iam_role.acl[acl.key].id
-      }]
-    }
-  }
-
-
-  dynamic "cloudtrail" {
-    for_each = var.enable_cloudtrail_data_events ? [1] : []
-    content {
-      name = "s3-data-events"
-    }
+  # Block public access
+  public_access_block {
+    block_public_acls       = true
+    block_public_policy     = true
+    ignore_public_acls      = true
+    restrict_public_buckets = true
   }
 }
 
-resource "aws_iam_role" "acl" {
-  for_each = var.cross_account_roles
-  name     = "cross-account-access-role-${each.key}"
+resource "aws_cloudtrail" "this" {
+  count           = var.enable_data_events ? 1 : 0
+  name            = "my-cloudtrail"
+  s3_bucket_name  = aws_s3_bucket.bucket.bucket
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Action = "sts:AssumeRole",
-      Effect = "Allow",
-      Principal = {
-        AWS = var.cross_account_roles[each.key].role_arn
-      }
-    }]
-  })
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true
+
+    data_resource {
+      type = "AWS::S3::Object"
+      values = ["${aws_s3_bucket.bucket.arn}/"]
+    }
+  }
 }
