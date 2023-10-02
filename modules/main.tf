@@ -23,7 +23,7 @@ resource "aws_s3_bucket" "s3_bucket" {
   dynamic "lifecycle_rule" {
     for_each = var.lifecycle_transition_days_standard_ia >= 0 || var.lifecycle_transition_days_glacier >= 0 ? [true] : []
     content {
-      id      = "example-lifecycle-rule"
+      id      = "lifecycle-rule"
       status  = "Enabled"
 
       transition {
