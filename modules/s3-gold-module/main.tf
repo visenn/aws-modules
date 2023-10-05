@@ -8,16 +8,27 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "sse_configuration
   
   rule {
     apply_server_side_encryption_by_default {
-      kms_master_key_id = var.kms_key_id
+      kms_master_key_id = data.aws_kms_key.for_gold.id
       sse_algorithm     = "aws:kms"
     }
   }
 }
 
-# resource "aws_s3_bucket_acl" "bucket_acl" {
-#  bucket = aws_s3_bucket.bucket.id
-#  acl    = "private"
-# }
+/* resource "aws_s3_bucket_acl" "bucket_acl" {
+ bucket = aws_s3_bucket.bucket.id
+ acl    = "private"
+} */
+
+/* resource "aws_s3_bucket_ownership_controls" "s3_bucket_acl_ownership" {
+  bucket = aws_s3_bucket.bucket-one-two.id
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+} */
+
+/* Since April 2023 AWS activates by default "BucketOwnerEnforced" ownership in the bucket
+   which disables ACL. This is why it is not possible to define ACL resource.
+   If the object ownership would be defined to "ObjectWriter" then ACL can be defined and for example set as "private" */
 
 resource "aws_s3_bucket_public_access_block" "bucket_public_access_block" {
   bucket = aws_s3_bucket.bucket.id
@@ -104,10 +115,15 @@ resource "aws_s3_bucket_policy" "bucket_policy" {
   })
 }
 
+data "aws_kms_key" "for_gold" {
+  key_id = var.kms_key_id
+}
+
+
 resource "aws_kms_grant" "kms_grant" {
   for_each          = { for role in var.external_iam_roles : role.arn => role }
   name              = "KMSGrant-${each.value.arn}"
-  key_id            = var.kms_key_id
+  key_id            = data.aws_kms_key.for_gold.id
   grantee_principal = each.key  # Each IAM Role ARN
   
   operations = [
@@ -120,9 +136,9 @@ resource "aws_kms_grant" "kms_grant" {
     "DescribeKey"
   ]
   
-  constraints {
-    encryption_context_subset = {
-      "s3:x-amz-server-side-encryption" = "aws:kms"
-    }
-  }
+#  constraints {
+#    encryption_context_subset = {
+#      "s3:x-amz-server-side-encryption" = "aws:kms"
+#    }
+#  }
 }
