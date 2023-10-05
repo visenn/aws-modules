@@ -31,4 +31,8 @@ module "s3_bucket" {
   ] 
   #kms_key_id = "arn:aws:kms:eu-west-1:612820001683:key/9de9445c-17d6-4a09-92d5-62610ad2dcaa"
   kms_key_id = "9de9445c-17d6-4a09-92d5-62610ad2dcaa"
+  tags = {
+    Environment = "development"
+    Owner = "Visenn"
+  }
 }

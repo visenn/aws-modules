@@ -1,6 +1,8 @@
 resource "aws_s3_bucket" "bucket" {
   bucket = var.bucket_name
   
+  tags = var.tags
+  
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "sse_configuration" {

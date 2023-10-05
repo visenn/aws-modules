@@ -47,3 +47,8 @@ variable "bucket_name" {
   description = "The name of bucket"
   type        = string
 }
+
+variable "tags" {
+  description = "Tags which will be applied to the bucket"
+  type = map
+}
